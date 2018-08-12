@@ -3,4 +3,4 @@
  
 ### 更新节点
 - 初始化项目
-- 添加Array迭代方法例子
+- 添加Array迭代方法例子，项目目录array_iterative_method
