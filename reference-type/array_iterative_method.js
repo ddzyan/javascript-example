@@ -1,4 +1,5 @@
 //数组的所有迭代方法，将不对原始数组进行操作，不影响原始数组的值
+//item当前项值 index当前项下标索引 array数组对象
 
 const numbers = [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1];
 
@@ -48,6 +49,7 @@ console.log(`mapResult ${mapResult}`);
 
 //对数组中的每个项目进行归并操作，将上一个返回值，当前值，下标索引和数组对象传入函数中。
 //reduceRight作用相同，只是从数组最后一位开始向第一位执行函数
+//pre 前一个返回值 cur当前值 index当前值的下标索引 array数组对象
 const reduceResult = numbers.reduce(function (pre, cur, index, array) {
     return pre + cur;
 })
