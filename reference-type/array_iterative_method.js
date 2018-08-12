@@ -45,3 +45,11 @@ const mapResult = numbers.map(function (item, index, array) {
 })
 
 console.log(`mapResult ${mapResult}`);
+
+//对数组中的每个项目进行归并操作，将上一个返回值，当前值，下标索引和数组对象传入函数中。
+//reduceRight作用相同，只是从数组最后一位开始向第一位执行函数
+const reduceResult = numbers.reduce(function (pre, cur, index, array) {
+    return pre + cur;
+})
+
+console.log(`reduceResult :${reduceResult}`);
