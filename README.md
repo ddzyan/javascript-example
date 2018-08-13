@@ -4,3 +4,4 @@
 ### 更新节点
 - 初始化项目
 - 添加Array迭代方法例子，项目目录array_iterative_method
+- 添加使用Math.random()，产生指定区间的随机数
