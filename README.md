@@ -12,3 +12,5 @@
 - create-object-mode 添加了 闭包执行环境的变量作用域(Closure)
 
 #### 添加node用例 [2018-11-14]
+##### 添加process用例
+- 添加process异常捕捉用例
