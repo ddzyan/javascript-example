@@ -6,16 +6,16 @@ const aesutil = {};
  * aes加密
  * @param data 待加密内容
  * @param key 必须为16位私钥
+ * @param iv 向量
  * @returns {string}
  */
-aesutil.encryption = function (data, key) {
+aesutil.encryption = function (data, key, iv="") {
     if (!data && key.length == 16) {
         return "";
     }
     console.log('Original cleartext: ' + data);
     const algorithm = 'aes-128-ecb';
     const clearEncoding = 'utf8';
-    const iv = "";
     const cipherEncoding = 'base64';
     const cipher = crypto.createCipheriv(algorithm, key, iv); // 创建加密对象
 
@@ -31,18 +31,18 @@ aesutil.encryption = function (data, key) {
  * aes解密
  * @param data 待解密内容
  * @param key 必须为16位私钥
+ * @param iv 向量
  * @returns {string}
  */
-aesutil.decryption = function (data, key, iv) {
+aesutil.decryption = function (data, key, iv ="") {
     if (!data && key.length == 16) {
         return "";
     }
-    iv = iv || "";
-    var clearEncoding = 'utf8';
-    var cipherEncoding = 'base64';
-    var algorithm = 'aes-128-ecb';
-    var cipherChunks = [];
-    var decipher = crypto.createDecipheriv(algorithm, key, iv); // 创建解密对象
+    const clearEncoding = 'utf8';
+    const cipherEncoding = 'base64';
+    const algorithm = 'aes-128-ecb';
+    const cipherChunks = [];
+    const decipher = crypto.createDecipheriv(algorithm, key, iv); // 创建解密对象
     cipherChunks.push(decipher.update(data, cipherEncoding, clearEncoding));
     cipherChunks.push(decipher.final(clearEncoding));
     console.log("decryption:", cipherChunks.join(''));
