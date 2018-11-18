@@ -1,6 +1,17 @@
 const crypto = require('crypto');
 
 
+const MD5Encryption = function (data) {
+    const algorithm = 'md5';
+
+    const encryption = crypto.createHash(algorithm);//创建指定加密算法的对象
+    let encryptionted = encryption.update(data).digest('hex');
+    console.log(`${algorithm} encryptionted :`, encryptionted,'\n');
+    return encryptionted;
+}
+
+MD5Encryption("12312");
+
 const aesutil = {};
 /**
  * aes加密
@@ -9,22 +20,21 @@ const aesutil = {};
  * @param iv 向量
  * @returns {string}
  */
-aesutil.encryption = function (data, key, iv="") {
+aesutil.encryption = function (data, key, iv = "") {
     if (!data && key.length == 16) {
+        console.error("parameter error");
         return "";
     }
     console.log('Original cleartext: ' + data);
-    const algorithm = 'aes-128-ecb';
-    const clearEncoding = 'utf8';
+    const algorithm = 'aes-128-ecb'; //算法
+    const clearEncoding = 'utf8'; //字符串编码
     const cipherEncoding = 'base64';
     const cipher = crypto.createCipheriv(algorithm, key, iv); // 创建加密对象
 
-    const cipherChunks = [];
-    cipherChunks.push(cipher.update(data, clearEncoding, cipherEncoding));
-    cipherChunks.push(cipher.final(cipherEncoding));
-    console.log(`${cipherEncoding} ciphertext ${cipherChunks.join('')} \n`);
-
-    aesutil.decryption(cipherChunks.join(''), key);
+    let encrypted = cipher.update(data, clearEncoding, cipherEncoding);
+    encrypted += cipher.final(cipherEncoding);
+    console.log(`${cipherEncoding} ciphertext ${encrypted} \n`);
+    return encrypted;
 }
 
 /**
@@ -34,21 +44,23 @@ aesutil.encryption = function (data, key, iv="") {
  * @param iv 向量
  * @returns {string}
  */
-aesutil.decryption = function (data, key, iv ="") {
+aesutil.decryption = function (data, key, iv = "") {
     if (!data && key.length == 16) {
+        console.error("parameter error");
         return "";
     }
     const clearEncoding = 'utf8';
     const cipherEncoding = 'base64';
     const algorithm = 'aes-128-ecb';
-    const cipherChunks = [];
     const decipher = crypto.createDecipheriv(algorithm, key, iv); // 创建解密对象
-    cipherChunks.push(decipher.update(data, cipherEncoding, clearEncoding));
-    cipherChunks.push(decipher.final(clearEncoding));
-    console.log("decryption:", cipherChunks.join(''));
+
+    let decryption = decipher.update(data, cipherEncoding, clearEncoding);
+    decryption += decipher.final(clearEncoding);
+    console.log(`${cipherEncoding} decryption ${decryption} \n`);
 }
 
-const beforString = "j5cFtKCEWftVTAEjuo1K7PvEjmMqeKTikn";
+const data = "5Jpvj5cFtKCEWftVTAEjuo1K7PvEjmMqeKTiknkc9dnF7RtAmpM";
 const key = "8r9mPAsWm3N&abcd"; // key 必须为16位字符串
 
-aesutil.encryption(beforString, key);
+const encryptedData = aesutil.encryption(data, key);
+aesutil.decryption(encryptedData, key);
