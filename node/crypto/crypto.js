@@ -58,7 +58,7 @@ aesutil.decryption = function (data, key, iv = "") {
     console.log(`${cipherEncoding} decryption ${decryption} \n`);
 }
 
-const data = "5Jpvj5cFtKCEWftVTAEjuo1K7PvEjmMqeKTiknkc9dnF7RtAmpM";
+const data = "5Jpvj5cFtKCEWftVTAEjuo1";
 const key = "8r9mPAsWm3N&abcd"; // key 必须为16位字符串
 
 const encryptedData = aesutil.encryption(data, key);
