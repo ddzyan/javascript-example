@@ -55,7 +55,7 @@ aesutil.decryption = function (data, key, iv = "") {
 
     let decryption = decipher.update(data, cipherEncoding, clearEncoding);
     decryption += decipher.final(clearEncoding);
-    console.log(`${cipherEncoding} decryption  ${decryption} \n`);
+    console.log(`${cipherEncoding} decryption ${decryption} \n`);
 }
 
 const data = "5Jpvj5cFtKCEWftVTAEjuo1";
