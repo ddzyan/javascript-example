@@ -9,9 +9,10 @@
 js 运行特点为单线程,如果没有异步编程,则线程将要卡死。js 异步编程实现方法有：
 
 1. 回调函数
-2. 事件驱动
-3. Promise 对象
-4. async 和 await
+2. 事件监听(主要用于浏览器端的事件绑定)
+3. 事件驱动
+4. Promise 对象
+5. async 和 await
 
 主要原理都是解决：js 主线程先执行主要逻辑代码,遇到 I/O ,计时器等耗时事件,则将事件推到事件循环中。在事件循环中遍历到事件状态完成后要如何通知主线程继续执行。![image](http://www.runoob.com/wp-content/uploads/2015/09/event_loop.jpg)
 
