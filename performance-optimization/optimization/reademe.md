@@ -1,31 +1,108 @@
-### 简介
+## 简介
 
-性能测试结果
+当系统开发完毕之后，为了了解系统最大能够承受的并发量是多少和在并发情况下的服务器负载情况，我们就需要在上线前做一些压力测试，了解系统性能瓶颈，针对性优化系统代码。
 
-当前本地测试环境，最大并发数量：7
+负载测试关键信息：
+
+- TPS(Transaction Per Second)经常是业务核心逻辑测试结果的衡量单位，它的定义是：每秒传输的事物处理个数
+
+## 负载测试
+
+做负载测试的工具有很多，例如:loadTest,ab,autocannon.
+
+我这里选用的是 autocannon，因为它和我接下来要使用的性能优化工具 node-clinic 有直接关系。
+
+### 安装
 
 ```shell
-# 再提高并发数 -c 的值时，发现 Completed requests 下降
-$ loadtest http://localhost:3002/ -c 7 -t 1.5
-[Thu Oct 10 2019 16:57:53 GMT+0800 (China Standard Time)] INFO Requests: 0, requests per second: 0, mean latency: 0 ms
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Target URL:          http://localhost:3002/
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Max time (s):        1.5
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Concurrency level:   8
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Agent:               none
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Completed requests:  6
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Total errors:        0
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Total time:          1.5241599000000001 s
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Requests per second: 4
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Mean latency:        1264.1 ms
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO Percentage of the requests served within a certain time
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO   50%      1312 ms
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO   90%      1450 ms
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO   95%      1450 ms
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO   99%      1450 ms
-[Thu Oct 10 2019 16:57:55 GMT+0800 (China Standard Time)] INFO  100%      1450 ms (longest request)
+npm i autocannon -g
 ```
 
-当前本地测试环境，每秒最多能接收的请求：2
+### 参数
+
+- -c ：并发连接的客户端数量，默认 10
+- -p ：单个并发的客户端发送的请求数量，默认 1
+- -d ：执行的时间，默认 10 秒
+- -m ：请求类型，默认 GET
+- -b ：请求的报文体
+
+### 实操
+
+#### 控制台运行
+
+##### demo1
+
+- 负载测试配置:10 个并发量，每个每秒发送 1 个请求，持续时间为 10 秒。
+- 测试的接口没有任何处理，非常的简单
+
+```shell
+# 启动服务器
+$ node ./child-process-cpu-server.js
+
+$ autocannon -c 10 -d 10 -p 1 localhost:3002
+Running 10s test @ http://localhost:3002
+10 connections
+
+┌─────────┬──────┬──────┬───────┬──────┬─────────┬─────────┬─────────┐
+│ Stat    │ 2.5% │ 50%  │ 97.5% │ 99%  │ Avg     │ Stdev   │ Max     │
+├─────────┼──────┼──────┼───────┼──────┼─────────┼─────────┼─────────┤
+│ Latency │ 0 ms │ 0 ms │ 2 ms  │ 2 ms │ 0.27 ms │ 0.65 ms │ 28.5 ms │
+└─────────┴──────┴──────┴───────┴──────┴─────────┴─────────┴─────────┘
+┌───────────┬────────┬────────┬─────────┬─────────┬──────────┬─────────┬────────┐
+│ Stat      │ 1%     │ 2.5%   │ 50%     │ 97.5%   │ Avg      │ Stdev   │ Min    │
+├───────────┼────────┼────────┼─────────┼─────────┼──────────┼─────────┼────────┤
+│ Req/Sec   │ 5143   │ 5143   │ 11047   │ 11967   │ 10490.73 │ 1790.16 │ 5140   │
+├───────────┼────────┼────────┼─────────┼─────────┼──────────┼─────────┼────────┤
+│ Bytes/Sec │ 1.1 MB │ 1.1 MB │ 2.36 MB │ 2.56 MB │ 2.24 MB  │ 383 kB  │ 1.1 MB │
+└───────────┴────────┴────────┴─────────┴─────────┴──────────┴─────────┴────────┘
+
+Req/Bytes counts sampled once per second.
+
+115k requests in 11.08s, 24.7 MB read
+
+```
+
+在接下来我将并发数提升为 20，获得的结果与之前基本一致，可以我们就可以获得结果：
+
+- 10 秒总共发送了 115k 请求
+- 每个请求平均被处理的时间是 0.27 ms
+- 平均每秒能够处理的请求是 10490 个，TPS 等于：10490
+
+##### demo2
+
+- 负载测试配置:10 个并发量，每个每秒发送 1 个请求，持续时间为 10 秒。
+- 测试的接口包含了一段复杂的算法
+
+```shell
+# 启动服务器
+$ node ./child-process-cpu-server.js
+
+$ autocannon -c 10 -d 10 -p 1 localhost:3002/fib?m=30
+Running 10s test @ http://localhost:3002/fib?m=30
+10 connections
+
+┌─────────┬────────┬────────┬────────┬────────┬───────────┬──────────┬───────────┐
+│ Stat    │ 2.5%   │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev    │ Max       │
+├─────────┼────────┼────────┼────────┼────────┼───────────┼──────────┼───────────┤
+│ Latency │ 226 ms │ 322 ms │ 495 ms │ 522 ms │ 328.59 ms │ 56.93 ms │ 532.35 ms │
+└─────────┴────────┴────────┴────────┴────────┴───────────┴──────────┴───────────┘
+┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬───────┬─────────┐
+│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev │ Min     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
+│ Req/Sec   │ 26      │ 26      │ 30      │ 34      │ 29.9    │ 2.17  │ 26      │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
+│ Bytes/Sec │ 5.43 kB │ 5.43 kB │ 6.27 kB │ 7.11 kB │ 6.25 kB │ 453 B │ 5.43 kB │
+└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴───────┴─────────┘
+
+Req/Bytes counts sampled once per second.
+
+299 requests in 10.07s, 62.5 kB read
+```
+
+结果为：
+
+- 10 秒总共发送了 299 请求
+- 每个请求平均被处理的时间是 328.59 ms
+- 平均每秒能够处理的请求是 29.9 个，TPS 等于：29.9
+
+根据结果可以发现，这个接口有很大的处理空间。由于 nodejs 运行环境为单线程，如果遇到密集的 CPU 运行，则会导致主线程卡死，等待处理结果。所以我们应该在进行负载测试的时候，进行性能监测，最好能够了解每个调用栈的 CPU 使用情况，针对性进行优化。

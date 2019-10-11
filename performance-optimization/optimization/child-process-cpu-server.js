@@ -20,7 +20,6 @@ function fib(num) {
 }
 
 app.get("/fib", function(req, res) {
-  const startTime = Date.now();
   const result = fib(req.query.m || 1);
   res.send(result.toString());
   /* const work = fork("./work.js");
