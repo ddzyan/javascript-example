@@ -11,12 +11,19 @@
  */
 const { fork } = require("child_process");
 const express = require("express");
+const fs = require("fs");
 const app = express();
 
 function fib(num) {
   if (num === 0) return 0;
   if (num === 1) return 1;
   return fib(num - 2) + fib(num - 1);
+}
+
+function timeout(time, cb) {
+  setTimeout(() => {
+    cb("ok");
+  }, 1000 * Number.parseFloat(time));
 }
 
 app.get("/fib", function(req, res) {
@@ -41,6 +48,21 @@ app.get("/fib", function(req, res) {
 
 app.get("/", function(req, res) {
   res.send("hello word");
+});
+
+app.get("/time", function(req, res) {
+  timeout(req.query.m || 1, data => {
+    const file = fs.readFile("./isolate-00000221381DBAD0-5544-v8.log", function(
+      error,
+      data
+    ) {
+      if (!error) {
+        res.send(data.toString().length + "");
+      } else {
+        res.send("读取失败");
+      }
+    });
+  });
 });
 
 app.listen(3002, () => {

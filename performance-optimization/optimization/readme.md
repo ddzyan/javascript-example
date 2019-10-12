@@ -6,6 +6,11 @@
    2. 火焰图的 X 和 Y 轴代表着什么
    3. 案例分析
 3. 异步问题如何分析
+   1. bubbleprof
+   2. 圆圈代表什么
+   3. 线条代表什么
+   4. 要如何分析 bubbleprof 图
+   5. 案例分析
 
 代码仓库：https://github.com/ddzyan/javascript-example/tree/master/performance-optimization/optimization
 
@@ -33,7 +38,7 @@ npm install -g clinic
 
 在进行压力测试的时候，我选择了同一个作者开发的工具:autocannon，但是这并不是绝对的，你也可以使用 ab,loadtest 等。
 
-##### 操作
+##### 案例一(同步优化)
 
 ```shell
 clinic doctor --on-port 'autocannon localhost:$PORT/fib?m=38' -- node child-process-cpu-server.js
@@ -164,3 +169,122 @@ clinic upload .clinic\22320.clinic-flame
 
 ![image](http://www.zmscode.cn/mdImages/flame2.png)
 到这里同步优化结束
+
+##### 案例二(异步优化)
+
+这里我增加了一个接口，用来测试高 I/O 情况下的，代码优化过程。首先还是先执行压力测试，并且关注生成的 doctor 报告
+
+```shell
+clinic doctor --on-port 'autocannon localhost:$PORT/time?m=10' -- node child-process-cpu-server.js
+
+┌─────────┬──────┬──────┬───────┬──────┬──────┬───────┬──────┐
+│ Stat    │ 2.5% │ 50%  │ 97.5% │ 99%  │ Avg  │ Stdev │ Max  │
+├─────────┼──────┼──────┼───────┼──────┼──────┼───────┼──────┤
+│ Latency │ 0 ms │ 0 ms │ 0 ms  │ 0 ms │ 0 ms │ 0 ms  │ 0 ms │
+└─────────┴──────┴──────┴───────┴──────┴──────┴───────┴──────┘
+┌───────────┬─────┬──────┬─────┬───────┬─────┬───────┬─────┐
+│ Stat      │ 1%  │ 2.5% │ 50% │ 97.5% │ Avg │ Stdev │ Min │
+├───────────┼─────┼──────┼─────┼───────┼─────┼───────┼─────┤
+│ Req/Sec   │ 0   │ 0    │ 0   │ 0     │ 0   │ 0     │ 0   │
+├───────────┼─────┼──────┼─────┼───────┼─────┼───────┼─────┤
+│ Bytes/Sec │ 0 B │ 0 B  │ 0 B │ 0 B   │ 0 B │ 0 B   │ 0 B │
+└───────────┴─────┴──────┴─────┴───────┴─────┴───────┴─────┘
+
+Req/Bytes counts sampled once per second.
+
+0 requests in 10.11s, 0 B read
+10 errors (10 timeouts)
+```
+
+![image](http://www.zmscode.cn/mdImages/doctor2.png)
+
+根据 CPU 和 EVENTLOOP 图表，和诊断结果发现：
+医生发现了潜在的 I / O 问题：
+可能有长期运行的异步活动
+这可能意味着瓶颈根本不是 Node 进程，而是 I / O 操作
+诊断：clinic bubbleprof 用于探索异步延迟– clinic bubbleprof -h 开始运行。
+
+接下来使用 clinic bubbleprof 来具体分析，哪个 I/O 才做，导致了延迟
+
+#### bubbleprof
+
+- 圆圈代表：大小代表异步任务代码和等待响应所消耗的时间
+- 线条代表：上一组中启动该组的异步任务操作
+
+```shell
+clinic bubbleprof --on-port 'autocannon localhost:$PORT/time?m=1' -- node child-process-cpu-server.js
+
+Running 10s test @ http://localhost:3002/time?m=2
+10 connections
+
+┌─────────┬─────────┬─────────┬─────────┬─────────┬────────────┬──────────┬────────────┐
+│ Stat    │ 2.5%    │ 50%     │ 97.5%   │ 99%     │ Avg        │ Stdev    │ Max        │
+├─────────┼─────────┼─────────┼─────────┼─────────┼────────────┼──────────┼────────────┤
+│ Latency │ 2003 ms │ 2014 ms │ 2077 ms │ 2079 ms │ 2025.78 ms │ 25.36 ms │ 2079.33 ms │
+└─────────┴─────────┴─────────┴─────────┴─────────┴────────────┴──────────┴────────────┘
+┌───────────┬─────┬──────┬─────┬─────────┬───────┬─────────┬─────────┐
+│ Stat      │ 1%  │ 2.5% │ 50% │ 97.5%   │ Avg   │ Stdev   │ Min     │
+├───────────┼─────┼──────┼─────┼─────────┼───────┼─────────┼─────────┤
+│ Req/Sec   │ 0   │ 0    │ 0   │ 10      │ 4     │ 4.9     │ 10      │
+├───────────┼─────┼──────┼─────┼─────────┼───────┼─────────┼─────────┤
+│ Bytes/Sec │ 0 B │ 0 B  │ 0 B │ 2.09 kB │ 836 B │ 1.02 kB │ 2.09 kB │
+└───────────┴─────┴──────┴─────┴─────────┴───────┴─────────┴─────────┘
+
+Req/Bytes counts sampled once per second.
+
+40 requests in 10.07s, 8.36 kB read
+Analysing data
+Generated HTML file is .clinic\35736.clinic-bubbleprof.html
+You can use this command to upload it:
+clinic upload .clinic\35736.clinic-bubbleprof
+```
+
+![image](http://www.zmscode.cn/mdImages/bubbleprof_1.png)
+
+发现异步任务主要为：网络 I/0,定时器和文件 I/O 操作。而其中计时器任务在 10 秒压力测试中，消耗了 10 秒的时间。
+
+![image](http://www.zmscode.cn/mdImages/bubbleprof_2.png)
+
+点击定时器任务条，发现主要为一个 timeout 函数的异步调用，操作了导致 10029 毫秒的延迟，代码位置在：
+
+```shell
+ at timeout .\child-process-cpu-server.js:24:3
+ at  .\child-process-cpu-server.js:54:3
+```
+
+查看代码发现里面有个根据用户传入的参数，设置的定时器任务，这部分代码需要优化。
+
+##### 优化
+
+将计时器时间缩短一半，再次进行测试，观察结果:TPS 提高到了 19，优化成功。从图中我们还可以看出，整个操作中，基本都是计时器任务在占用 eveloop 时间
+
+```shell
+clinic bubbleprof --on-port 'autocannon localhost:$PORT/time?m=0.5' -- node child-process-cpu-server.js
+
+10 connections
+
+┌─────────┬────────┬────────┬────────┬────────┬───────────┬───────┬───────────┐
+│ Stat    │ 2.5%   │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev │ Max       │
+├─────────┼────────┼────────┼────────┼────────┼───────────┼───────┼───────────┤
+│ Latency │ 502 ms │ 505 ms │ 553 ms │ 559 ms │ 507.82 ms │ 11 ms │ 563.13 ms │
+└─────────┴────────┴────────┴────────┴────────┴───────────┴───────┴───────────┘
+┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬───────┬─────────┐
+│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev │ Min     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
+│ Req/Sec   │ 10      │ 10      │ 20      │ 20      │ 19      │ 3     │ 10      │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
+│ Bytes/Sec │ 2.09 kB │ 2.09 kB │ 4.18 kB │ 4.18 kB │ 3.97 kB │ 627 B │ 2.09 kB │
+└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴───────┴─────────┘
+
+Req/Bytes counts sampled once per second.
+
+190 requests in 10.05s, 39.7 kB read
+Analysing data
+Generated HTML file is .clinic\17648.clinic-bubbleprof.html
+You can use this command to upload it:
+clinic upload .clinic\17648.clinic-bubbleprof
+```
+
+![image](http://www.zmscode.cn/mdImages/bubbleprof_3.png)
+
+在实际开发的项目中，不止出现测试代码中设置定时任务的情况，可能出现的问题还有例如：数据库操作，网络传输，文件操作等。但是分析的思路基本一致，我这也只是抛砖引玉下。
