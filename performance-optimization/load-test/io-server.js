@@ -13,14 +13,9 @@ const http = require("http");
 } */
 
 const server = http.createServer((req, res) => {
-  console.log("接收请求");
-
-  setTimeout(() => {
-    res.end("hello word");
-    console.log("耗时 :", Date.now() - starttime);
-  }, 2000);
+  res.end("hello word");
 });
 
-server.listen(3001, () => {
+server.listen(3000, () => {
   console.log("服务启动成功");
 });

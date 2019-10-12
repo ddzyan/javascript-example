@@ -12,15 +12,12 @@ function fib(num) {
 }
 
 const server = http.createServer((req, res) => {
-  console.log("接收请求");
-  const starttime = Date.now();
   /* setTimeout(() => {
     res.end("hello word");
     console.log("耗时 :", Date.now() - starttime);
   }, 2000); */
-  const result = fib(100);
+  const result = fib(30);
   res.end(result.toString());
-  console.log("耗时 :", Date.now() - starttime);
 });
 
 server.listen(3000, () => {
