@@ -9,3 +9,4 @@
 3. [高 cpu 和一般 nodejs 性能压力测试](https://github.com/ddzyan/javascript-example/tree/master/performance-optimization/load-test)
 4. [记录一次代码优化过程](https://github.com/ddzyan/javascript-example/tree/master/performance-optimization/optimization)
 5. [js 中常见的设计模式 demo](https://github.com/ddzyan/javascript-example/tree/master/designPatterns)
+6. [js 函数参数和返回值代码注释写法](https://github.com/ddzyan/javascript-example/tree/master/JSDoc)
